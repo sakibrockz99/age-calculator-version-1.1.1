@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
+  <title>Age Calculator · Your time, beautifully counted</title>
+  <meta name="description" content="A private, offline age calculator with clear calendar rules, birthday countdowns, and thoughtfully crafted themes.">
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #ffffff;
+      --surface: #fdfbf8;
+      --surface-raised: #fffefd;
+      --field: #faf8f4;
+      --line: #eee9e2;
+      --line-strong: #e4ddd2;
+      --ink: #222923;
+      --muted: #777d76;
+      --faint: #969b94;
+      --accent: #2f463a;
+      --accent-pressed: #26392f;
+      --accent-soft: #eef2ee;
+      --error: #b8473b;
+      --radius-lg: 24px;
+      --shadow: 0 18px 48px rgba(37, 43, 36, .055), 0 2px 8px rgba(37, 43, 36, .025);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--page); }
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      display: flex;
+      flex-direction: column;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button, input { font: inherit; }
+    button { -webkit-appearance: none; appearance: none; }
+    .page-wrap {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: max(28px, env(safe-area-inset-top)) 20px max(22px, env(safe-area-inset-bottom));
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      margin: 7px 0 42px;
+    }
+    .brand-mark {
+      width: 39px;
+      height: 39px;
+      border-radius: 13px;
+      background: var(--accent);
+      color: #fffdf8;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+    }
+    .brand-mark svg { width: 22px; height: 22px; }
+    .brand-name { font-size: 14px; font-weight: 700; letter-spacing: -.025em; }
+    .brand-kicker { margin-top: 2px; color: var(--muted); font-size: 11px; letter-spacing: .035em; }
+    .intro { margin-bottom: 26px; }
+    .eyebrow {
+      margin: 0 0 11px;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(31px, 8.7vw, 40px);
+      line-height: 1.08;
+      letter-spacing: -.055em;
+      font-weight: 680;
+    }
+    .intro-copy {
+      max-width: 330px;
+      margin: 13px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+    .calculator-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 21px;
+      box-shadow: var(--shadow);
+    }
+    .field-label {
+      display: block;
+      margin: 0 0 9px 1px;
+      color: #424a43;
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: .005em;
+    }
+    .date-field-wrap { position: relative; }
+    .date-field {
+      width: 100%;
+      min-height: 54px;
+      padding: 0 14px;
+      border: 1px solid var(--line-strong);
+      border-radius: 14px;
+      background: var(--field);
+      color: var(--ink);
+      outline: none;
+      font-size: 15px;
+      font-weight: 500;
+      transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+      accent-color: var(--accent);
+    }
+    .date-field:focus-visible {
+      border-color: #87998b;
+      box-shadow: 0 0 0 3px rgba(72, 103, 82, .10);
+      background: #fffefa;
+    }
+    .date-field[aria-invalid="true"] { border-color: var(--error); }
+    .error-message {
+      margin: 8px 1px 0;
+      color: var(--error);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .submit-button {
+      width: 100%;
+      min-height: 54px;
+      margin-top: 14px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 14px;
+      background: var(--accent);
+      color: #fffdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing: -.005em;
+      cursor: pointer;
+      transition: transform .14s ease, background .14s ease;
+    }
+    .submit-button svg { width: 17px; height: 17px; }
+    .submit-button:hover { background: var(--accent-pressed); }
+    .submit-button:active { transform: scale(.985); }
+    .submit-button:focus-visible, .reset-button:focus-visible { outline: 2px solid #87998b; outline-offset: 3px; }
+    .result-card {
+      margin-top: 14px;
+      padding: 21px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface-raised);
+      animation: reveal .26s cubic-bezier(.22, 1, .36, 1) both;
+    }
+    .result-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .result-label { margin: 0; color: var(--muted); font-size: 12px; font-weight: 550; }
+    .result-date { margin: 5px 0 0; color: var(--ink); font-size: 13px; font-weight: 650; line-height: 1.4; }
+    .result-mark {
+      width: 35px; height: 35px; border-radius: 12px;
+      flex: 0 0 auto; display: grid; place-items: center;
+      background: var(--accent-soft); color: var(--accent);
+    }
+    .result-mark svg { width: 18px; height: 18px; }
+    .age-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .age-unit {
+      min-width: 0;
+      padding: 15px 8px 13px;
+      border: 1px solid #f0ece6;
+      border-radius: 15px;
+      background: #fdfbf8;
+      text-align: center;
+    }
+    .age-number {
+      display: block;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(27px, 7.2vw, 34px);
+      line-height: 1.1;
+      letter-spacing: -.055em;
+      font-weight: 680;
+      overflow-wrap: anywhere;
+    }
+    .age-unit-label {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 550;
+    }
+    .result-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 15px;
+    }
+    .result-note { max-width: 230px; margin: 0; color: var(--faint); font-size: 11px; line-height: 1.45; }
+    .reset-button {
+      flex: 0 0 auto;
+      border: 0;
+      border-radius: 9px;
+      padding: 7px 9px;
+      background: transparent;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .page-footer { margin-top: auto; padding-top: 35px; text-align: center; color: #9a9e98; font-size: 11px; line-height: 1.55; }
+    .page-footer span { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .page-footer svg { width: 13px; height: 13px; }
+    [hidden] { display: none !important; }
+    @keyframes reveal { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 360px) {
+      .page-wrap { padding-left: 15px; padding-right: 15px; }
+      .brand { margin-bottom: 34px; }
+      .calculator-card, .result-card { padding: 17px; }
+      .age-grid { gap: 6px; }
+      .age-unit { padding-left: 4px; padding-right: 4px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+    }
+
+    .field-group + .field-group { margin-top: 16px; }
+    .weekday-note { margin: 6px 1px 0; min-height: 13px; color: var(--muted); font-size: 11px; }
+    .summary-strip {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      margin-top: 15px; padding: 12px 13px; border-radius: 13px;
+      background: #f2f5f3; color: #34483b; font-size: 13px; line-height: 1.45;
+    }
+    .summary-strip p { margin: 0; min-width: 0; }
+    .summary-arrow { flex: 0 0 auto; font-size: 21px; line-height: 1; }
+    .result-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 13px; }
+    .secondary-button {
+      min-height: 42px; padding: 8px 12px; border: 1px solid var(--line-strong);
+      border-radius: 12px; background: var(--surface-raised); color: var(--accent);
+      font-size: 11px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; cursor: pointer;
+    }
+    .secondary-button:active { background: var(--accent-soft); }
+    .support-sections { display: grid; gap: 12px; margin-top: 12px; }
+    .info-card {
+      min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 21px;
+      background: var(--surface-raised); box-shadow: 0 8px 24px rgba(37,43,36,.035);
+    }
+    .section-title { margin: 0 0 13px; font-size: 16px; line-height: 1.3; font-weight: 700; letter-spacing: -.035em; }
+    .section-kicker { margin: 0 0 10px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+    .next-birthday-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; text-align: center; }
+    .next-birthday-value { display: block; color: var(--accent); font-size: 28px; font-weight: 700; letter-spacing: -.05em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .next-birthday-label { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+    .next-birthday-caption { margin: 12px 0 0; color: var(--muted); font-size: 12px; text-align: center; line-height: 1.5; }
+    .accordion-card { padding: 0; overflow: hidden; }
+    .section-accordion { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 17px 18px; font-size: 16px; font-weight: 700; letter-spacing: -.025em; }
+    .section-accordion::-webkit-details-marker { display: none; }
+    .section-accordion::after { content: '›'; color: var(--accent); font-size: 24px; font-weight: 400; transform: rotate(90deg); transition: transform .18s ease; }
+    details[open] > .section-accordion::after { transform: rotate(-90deg); }
+    .accordion-body { padding: 0 18px 16px; }
+    .birthday-list { display: grid; gap: 8px; }
+    .birthday-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 11px; background: #f4f6f5; border-radius: 12px; }
+    .birthday-main { min-width: 0; }
+    .birthday-date { display: block; font-size: 13px; font-weight: 650; }
+    .birthday-weekday { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .birthday-age { flex: 0 0 auto; color: var(--accent); font-size: 12px; font-weight: 700; text-align: right; }
+    .elapsed-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; }
+    .elapsed-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; min-height: 62px; padding: 9px 5px; border-radius: 11px; background: #f1f5f4; text-align: center; }
+    .elapsed-tile.wide { grid-column: 1 / -1; min-height: 62px; }
+    .elapsed-number { display: block; max-width: 100%; color: #243d31; font-size: clamp(15px,4.3vw,20px); font-weight: 700; letter-spacing: -.04em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .elapsed-label { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; line-height: 1.3; letter-spacing: .025em; text-transform: uppercase; }
+    .detail-list { display: grid; gap: 12px; }
+    .detail-item dt { color: var(--muted); font-size: 12px; line-height: 1.3; }
+    .detail-item dd { margin: 4px 0 0; font-size: 14px; font-weight: 650; line-height: 1.4; }
+    .detail-note { margin: 12px 0 0; color: var(--faint); font-size: 10.5px; line-height: 1.45; }
+    .fun-stats { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; }
+    .fun-stat { min-width: 0; padding: 10px 11px; border-radius: 12px; background: #f4f6f5; }
+    .fun-stat-label { display: block; color: var(--muted); font-size: 11px; line-height: 1.35; }
+    .fun-stat-value { display: block; margin-top: 4px; color: var(--ink); font-size: clamp(15px,4vw,19px); font-weight: 700; line-height: 1.2; letter-spacing: -.035em; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+    .more-stats { margin-top: 12px; }
+    .more-stats .submit-button { min-height: 44px; margin-top: 0; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
+    .more-stats-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-top: 10px; }
+    .empty-hint { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .date-error-wide { margin-top: 9px; }
+    @media (max-width: 360px) {
+      .info-card { padding: 15px; }
+      .section-accordion { padding: 16px 15px; }
+      .accordion-body { padding-left: 15px; padding-right: 15px; }
+      .elapsed-grid { gap: 5px; }
+      .elapsed-tile { min-height: 58px; }
+    }
+
+
+/* Premium layer: every surface and state follows the chosen palette. */
+:root { --page:#f6f5f0; --surface:#fffefa; --surface-raised:#fffefa; --field:#f7f7f1; --line:#e1e4d9; --line-strong:#7d897b; --ink:#24352d; --muted:#57675d; --faint:#617064; --accent:#345645; --accent-pressed:#284536; --accent-soft:#eaf0e7; --on-accent:#fffefa; --error:#a52d2b; --halo:#e4e9dd; --shadow:0 18px 55px -25px #24352d24,0 2px 5px #24352d04; --radius-lg:25px; }
+html { background:var(--page); scrollbar-gutter:stable; }
+body { background:radial-gradient(ellipse at 8% 0%,var(--halo),transparent 48%),var(--page); }
+button,input,select,textarea { font:inherit; }
+button,select,summary,input[type=checkbox] { touch-action:manipulation; }
+button { color:inherit; }
+.page-wrap { max-width:1050px; padding:34px 34px 24px; }
+.brand { gap:12px; margin:0 0 48px; }
+.brand-mark { width:43px; height:43px; border-radius:15px; color:var(--on-accent); box-shadow:0 5px 12px #0000000c; }
+.brand-name { font-size:12px; letter-spacing:.12em; font-weight:750; }
+.brand-kicker { font-size:11px; letter-spacing:.015em; margin-top:5px; }
+.appearance-button { margin-left:auto; display:inline-flex; align-items:center; gap:8px; min-height:42px; border:1px solid var(--line-strong); border-radius:24px; padding:9px 14px; background:var(--surface); color:var(--accent); cursor:pointer; font-size:12px; font-weight:600; }
+.appearance-button:hover { background:var(--accent-soft); }
+.intro { margin-bottom:34px; }
+.eyebrow { font-size:10px; letter-spacing:.16em; font-weight:750; color:var(--accent); margin-bottom:14px; }
+h1 { font-size:clamp(35px,5.7vw,60px); line-height:1.07; font-weight:570; letter-spacing:-.05em; }
+h1 em { font-family:Georgia,'Times New Roman',serif; font-weight:400; letter-spacing:-.06em; color:var(--accent); }
+.intro-copy { max-width:450px; font-size:14px; line-height:1.8; margin-top:19px; }
+.app-layout { display:grid; grid-template-columns:minmax(0,.92fr) minmax(0,1.18fr); gap:24px; align-items:start; }
+.input-column,.output-column { min-width:0; }
+.input-column { position:sticky; top:24px; }
+.calculator-card { padding:27px; background:var(--surface); box-shadow:var(--shadow); }
+.calculator-card .section-title { font-family:Georgia,'Times New Roman',serif; font-size:24px !important; font-weight:400; letter-spacing:-.035em; }
+.field-label { color:var(--ink); font-size:12px; font-weight:650; display:flex; align-items:center; justify-content:space-between; min-height:23px; }
+.date-field { min-width:0; max-width:100%; min-height:54px; background:var(--field); color:var(--ink); font-size:16px; border-color:var(--line-strong); border-radius:12px; color-scheme:inherit; }
+.date-field:focus-visible { background:var(--field); border-color:var(--accent); box-shadow:none; }
+input[type=date]::-webkit-date-and-time-value { text-align:left; }
+:where(button,input,select,summary,textarea):focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
+.result-card:focus { outline:none; }
+.result-card:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
+.submit-button:focus-visible,.reset-button:focus-visible { outline-color:var(--accent); }
+.today-button { font-size:11px; font-weight:650; color:var(--accent); border:1px solid var(--line-strong); background:var(--surface); min-height:32px; border-radius:8px; padding:4px 9px; cursor:pointer; }
+.today-button[aria-pressed=true] { background:var(--accent-soft); }
+.weekday-note { color:var(--muted); min-height:16px; line-height:1.5; }
+.settings-row { margin-top:18px; display:grid; gap:8px; }
+.settings-row label { font-size:12px; color:var(--ink); font-weight:600; }
+.settings-row select { min-width:0; width:100%; background:var(--field); color:var(--ink); border:1px solid var(--line-strong); border-radius:10px; min-height:43px; padding:8px 9px; font-size:12px; }
+.input-hint { font-size:11px; color:var(--muted); line-height:1.5; margin:7px 1px 0; }
+.remember-option { display:flex; align-items:center; gap:8px; font-size:11px; line-height:1.6; margin:15px 0 3px; min-height:30px; color:var(--muted); cursor:pointer; }
+.remember-option input { width:16px; height:16px; accent-color:var(--accent); flex-shrink:0; }
+.submit-button { min-height:52px; border-radius:12px; color:var(--on-accent); font-size:13px; box-shadow:0 5px 14px #0000000b; }
+.submit-button:hover { background:var(--accent-pressed); }
+.method-card { display:flex; align-items:flex-start; gap:12px; padding:22px 12px 14px; color:var(--muted); }
+.method-symbol { font-size:28px; color:var(--accent); line-height:1; }
+.method-card strong { font-size:12px; color:var(--ink); font-weight:650; }
+.method-card p { font-size:11px; line-height:1.8; margin:5px 0 0; }
+.calculation-notes { padding:0 12px; color:var(--muted); font-size:11px; line-height:1.8; }
+.calculation-notes summary { cursor:pointer; padding:8px 0; font-size:11px; font-weight:650; color:var(--accent); }
+.calculation-notes p { margin:7px 0; }
+.empty-state { min-height:470px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px 24px; border:1px solid var(--line); border-radius:var(--radius-lg); background:linear-gradient(135deg,var(--surface),var(--field)); text-align:center; }
+.empty-orbit { width:98px; height:98px; padding:13px; border:1px solid var(--line); background:var(--accent-soft); border-radius:50%; color:var(--accent); margin:0 0 28px; }
+.empty-orbit svg { width:100%; height:100%; }
+.empty-state .eyebrow { font-size:9px; }
+.empty-state h2 { font:400 29px/1.2 Georgia,'Times New Roman',serif; letter-spacing:-.04em; margin:0; }
+.empty-state>p:not(.eyebrow) { font-size:12px; color:var(--muted); line-height:1.8; margin:15px 0 0; }
+.empty-units { width:100%; max-width:300px; margin-top:30px; display:grid; grid-template-columns:repeat(3,1fr); }
+.empty-units>span { font-size:27px; color:var(--accent); }
+.empty-units>span+span { border-left:1px solid var(--line); }
+.empty-units small { display:block; margin-top:7px; font:10px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; }
+.empty-caption { font-size:10px; color:var(--faint); margin-top:28px; line-height:1.6; }
+.result-card { margin-top:0; padding:25px; background:var(--surface-raised); box-shadow:var(--shadow); }
+.result-label { font-size:9px; color:var(--accent); letter-spacing:.14em; font-weight:750; }
+.result-date { font-size:12px; line-height:1.6; color:var(--muted); margin-top:8px; }
+.result-mark { background:var(--accent-soft); }
+.age-grid { gap:9px; }
+.age-unit { background:var(--field); border:1px solid var(--line); padding:20px 6px 17px; border-radius:16px; }
+.age-number { font-size:clamp(30px,4vw,43px); font-weight:570; letter-spacing:-.065em; }
+.age-unit-label { font-size:10px; }
+.summary-strip { background:var(--accent-soft); color:var(--accent); font-size:12px; padding:13px 14px; }
+.summary-arrow { display:none; }
+.result-note { color:var(--muted); max-width:260px; font-size:10px; line-height:1.6; }
+.reset-button { min-height:36px; }
+.secondary-button { border-color:var(--line-strong); background:var(--surface-raised); font-size:10px; min-height:43px; }
+.secondary-button:hover { background:var(--accent-soft); }
+.support-sections { gap:14px; margin-top:14px; }
+.info-card { padding:22px; background:var(--surface-raised); border-radius:21px; box-shadow:none; }
+.section-title { font-size:15px; letter-spacing:-.025em; font-weight:650; }
+.section-subtitle { color:var(--muted); font-size:11px; margin:-6px 0 15px; }
+.section-kicker { color:var(--accent); font-size:10px; }
+.next-birthday-value { font-size:34px; font-weight:570; }
+.next-birthday-grid { padding:3px 0; }
+.next-birthday-grid>div+div { border-left:1px solid var(--line); }
+.next-birthday-caption { font-size:11px; }
+.accordion-card { padding:0; }
+.section-accordion { font-size:14px; padding:18px 22px; }
+.accordion-body { padding:0 22px 20px; }
+.birthday-row,.fun-stat { background:var(--field); }
+.birthday-age { font-size:11px; }
+.elapsed-tile { background:var(--field); border:1px solid var(--line); }
+.elapsed-number { color:var(--accent); font-size:clamp(14px,2.8vw,20px); }
+.elapsed-label { font-size:9px; }
+.detail-note { color:var(--muted); font-size:10px; line-height:1.8; }
+.detail-item dd { font-size:13px; }
+.more-stats .submit-button { font-size:10px; color:var(--on-accent); }
+.fun-stat-value { font-size:17px; }
+.page-footer { padding-top:42px; margin-top:auto; color:var(--muted); font-size:10px; }
+.page-footer span { gap:7px; }
+.appearance-dialog { width:min(540px,calc(100% - 32px)); max-height:calc(100dvh - 40px); overflow:auto; border:1px solid var(--line-strong); border-radius:25px; padding:27px; background:var(--surface); color:var(--ink); box-shadow:0 25px 100px #00000035; }
+.appearance-dialog::backdrop { background:#101b1a75; backdrop-filter:blur(5px); }
+.dialog-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.dialog-heading h2 { font:400 25px/1.25 Georgia,'Times New Roman',serif; letter-spacing:-.04em; margin:0; }
+.dialog-heading .eyebrow { margin-bottom:9px; }
+.icon-button { border:1px solid var(--line-strong); width:36px; min-width:36px; height:36px; border-radius:50%; background:var(--field); color:var(--accent); font-size:23px; cursor:pointer; display:grid; place-items:center; }
+.dialog-copy { font-size:12px; color:var(--muted); line-height:1.8; margin:16px 0 20px; }
+.theme-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.theme-option { position:relative; min-width:0; border:1px solid var(--line-strong); background:var(--field); color:var(--ink); border-radius:14px; padding:12px; text-align:left; cursor:pointer; }
+.theme-option[aria-pressed=true] { outline:2px solid var(--accent); outline-offset:1px; }
+.theme-option[aria-pressed=true]::after { content:'✓'; position:absolute; top:11px; right:11px; color:var(--accent); font-weight:700; font-size:13px; }
+.theme-swatches { display:flex; gap:5px; margin-bottom:10px; }
+.theme-swatches i { display:block; width:21px; height:21px; border-radius:50%; border:1px solid #88888850; }
+.theme-name { display:block; font-size:11px; font-weight:650; }
+.theme-description { display:block; font-size:10px; color:var(--muted); margin-top:4px; }
+.dialog-foot { margin:20px 0 0; font-size:10px; color:var(--muted); text-align:center; }
+.share-dialog textarea { width:100%; resize:vertical; padding:13px; border:1px solid var(--line-strong); border-radius:12px; background:var(--field); color:var(--ink); font-size:14px; line-height:1.7; }
+.toast { position:fixed; z-index:20; bottom:max(22px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:max-content; max-width:calc(100% - 32px); background:var(--ink); color:var(--page); border-radius:13px; padding:0; font-size:12px; line-height:1.6; box-shadow:0 8px 32px #00000020; text-align:center; pointer-events:none; }
+.toast:not(:empty) { padding:12px 18px; }
+.sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
+.noscript-note { padding:20px; text-align:center; }
+@media(min-width:800px) { .support-sections { grid-template-columns:repeat(2,minmax(0,1fr)); } .support-sections>.info-card:nth-child(1),.support-sections>.info-card:nth-child(2),.support-sections>.info-card:nth-child(3),.support-sections>.info-card:nth-child(5) { grid-column:1 / -1; } .support-sections>.info-card:nth-child(4) { grid-column:1 / -1; } }
+@media(max-width:720px) { .page-wrap { max-width:510px; padding:24px 20px 24px; } .brand { margin-bottom:34px; } .brand-mark { width:37px; height:37px; border-radius:12px; } .brand-name { font-size:10px; letter-spacing:.08em; } .brand-kicker { font-size:9px; } .appearance-button { width:38px; min-width:38px; min-height:38px; padding:0; justify-content:center; } .appearance-button span { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); } .intro { margin-bottom:27px; } h1 { font-size:clamp(35px,8.5vw,44px); } .intro-copy { font-size:13px; max-width:340px; margin-top:16px; } .app-layout { grid-template-columns:1fr; gap:19px; } .input-column { position:static; } .calculator-card,.result-card { padding:23px; } .age-number { font-size:36px; } .empty-state { min-height:255px; padding:26px 20px; } .empty-orbit { display:none; } .empty-state h2 { font-size:26px; } .empty-state>p:not(.eyebrow) br { display:none; } .empty-state>p:not(.eyebrow) { margin-top:11px; } .empty-units { margin-top:24px; } .empty-caption { display:none; } .empty-state>p:not(.eyebrow) { max-width:240px; } .method-card { padding:18px 9px 8px; } .calculation-notes { padding:0 9px; } .elapsed-number { font-size:clamp(15px,4vw,20px); } }
+@media(max-width:360px) { .page-wrap { padding-left:15px; padding-right:15px; } .calculator-card,.result-card,.info-card { padding:18px; } .accordion-card { padding:0; } .section-accordion { padding:17px 18px; } .appearance-dialog { padding:20px; } .theme-option { padding:10px; } h1 { font-size:34px; } .age-number { font-size:32px; } }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+@media print { body { background:white; } .page-wrap { max-width:none; padding:0; } .brand,.intro,.input-column,.page-footer,.result-actions,.reset-button,.more-stats button,.toast,dialog { display:none!important; } .app-layout { display:block; } .result-card,.info-card { break-inside:avoid; box-shadow:none; } }
+/* Keep text contrast stable during the short result entrance. */
+@keyframes reveal { from { transform:translateY(5px); } to { transform:translateY(0); } }
+
+  </style>
+</head>
+<body>
+  <main class="page-wrap">
+    <div class="brand" aria-label="Age Calculator">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+          <path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17" />
+          <path d="M8 13h.01M12 13h.01M16 13h.01M8 16.5h.01M12 16.5h.01" stroke-width="2.3" />
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">AGE CALCULATOR</div>
+        <div class="brand-kicker">A little clarity. A lot of life.</div>
+      </div>
+      <button type="button" class="appearance-button" id="appearanceButton" aria-haspopup="dialog" aria-controls="appearanceDialog"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16Z" fill="currentColor" stroke="none"/></svg><span>Appearance</span></button>
+    </div>
+
+    <section class="intro" aria-labelledby="pageTitle">
+      <p class="eyebrow">THE ART OF KEEPING TIME</p>
+      <h1 id="pageTitle">Your life,<br><em>beautifully counted.</em></h1>
+      <p class="intro-copy">Every year, every month, every little day. Explore your age and the milestones still to come.</p>
+    </section>
+
+    <div class="app-layout">
+    <div class="input-column">
+    <form class="calculator-card" id="ageForm" novalidate>
+      <p class="eyebrow" style="margin-bottom:8px;">START WITH TWO DATES</p>
+      <h2 class="section-title" style="font-size:21px;margin-bottom:17px;">Make time make sense.</h2>
+      <div class="field-group">
+        <label class="field-label" for="birthday">Date of birth</label>
+        <div class="date-field-wrap">
+          <input class="date-field" id="birthday" name="birthday" type="date" autocomplete="bday" required aria-describedby="dateError">
+        </div>
+        <p class="weekday-note" id="birthdayWeekday" aria-live="polite"></p>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="ageOn">Age on <button type="button" id="todayButton" class="today-button" aria-pressed="true">Today <span aria-hidden="true">↗</span></button></label>
+        <div class="date-field-wrap">
+          <input class="date-field" id="ageOn" name="ageOn" type="date" required aria-describedby="dateError">
+        </div>
+        <p class="weekday-note" id="ageOnWeekday" aria-live="polite"></p>
+      </div>
+      <div class="settings-row"><label for="leapPolicy">February 29 birthdays</label><select id="leapPolicy" aria-describedby="leapPolicyHint"><option value="mar1">March 1 in other years</option><option value="feb28">February 28 in other years</option></select></div>
+      <p class="input-hint" id="leapPolicyHint">Choose your convention. Legal rules can differ.</p>
+      <label class="remember-option"><input type="checkbox" id="rememberBirthday" checked> Remember my birthday on this device</label>
+      <p class="error-message date-error-wide" id="dateError" role="alert" hidden></p>
+      <button class="submit-button" type="submit">
+        Calculate age
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+      </button>
+    </form>
+    <div class="method-card"><span class="method-symbol" aria-hidden="true">✧</span><div><strong>A calendar, not a guess.</strong><p>Real calendar dates. Clear leap-year rules. No account, no trackers, no network requests.</p></div></div>
+    <details class="calculation-notes"><summary>How the counting works</summary><p>Years count completed birthdays using your chosen February 29 rule. Months are counted forward from the last birthday and clamp to shorter month ends; remaining days are counted after that.</p><p>Total months are counted independently from your birth date. Dates use the Gregorian calendar, from year 0001 through 9999. Fixed dates refer to the start of that date.</p><p>Calendar-equivalent hours, minutes and seconds use 24 hours per day. They are not measured lifetime durations: birth time, birth timezone and daylight-saving changes are not included. “Today” adds your local clock time.</p><p>For examination or employment eligibility, use the exact cutoff date and the authority’s own rules. This is not a legal age determination.</p></details>
+    </div>
+    <div class="output-column">
+    <section class="empty-state" id="emptyState" aria-labelledby="emptyTitle"><div class="empty-orbit" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="32" cy="32" r="23"/><circle cx="32" cy="32" r="17" stroke-dasharray="1 6"/><path d="M32 18v14l9 6"/><circle cx="32" cy="32" r="2" fill="currentColor"/></svg></div><p class="eyebrow">YOUR NEXT CHAPTER STARTS HERE</p><h2 id="emptyTitle">More than a number.</h2><p>Put your dates on the left.<br>We’ll take care of the little details.</p><div class="empty-units" aria-hidden="true"><span>—<small>Years</small></span><span>—<small>Months</small></span><span>—<small>Days</small></span></div><span class="empty-caption">A moment to appreciate how far you’ve come.</span></section>
+    <section class="result-card" id="ageResult" aria-label="Calculated age" tabindex="-1" hidden>
+      <div class="result-head">
+        <div>
+          <p class="result-label">YOUR AGE, IN PERSPECTIVE</p>
+          <p class="result-date" id="asOfDate">As of today</p>
+        </div>
+        <div class="result-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>
+        </div>
+      </div>
+      <div class="age-grid" aria-label="Age in years, months and days">
+        <div class="age-unit"><span class="age-number" id="yearsValue">0</span><span class="age-unit-label">Years</span></div>
+        <div class="age-unit"><span class="age-number" id="monthsValue">0</span><span class="age-unit-label">Months</span></div>
+        <div class="age-unit"><span class="age-number" id="daysValue">0</span><span class="age-unit-label">Days</span></div>
+      </div>
+      <div class="summary-strip"><p id="ageSummary">Your age in years, months and days.</p><span class="summary-arrow" aria-hidden="true">➜</span></div>
+      <div class="result-actions">
+        <button class="secondary-button" type="button" id="saveDateButton">Export birthdays</button>
+        <button class="secondary-button" type="button" id="shareButton">Share</button>
+      </div>
+      <div class="result-foot">
+        <p class="result-note" id="storageNote">Birthday storage follows your preference above.</p>
+        <button class="reset-button" type="button" id="resetButton">Reset</button>
+      </div>
+    </section>
+
+    <div class="support-sections" id="extraResults" hidden>
+      <section class="info-card" aria-labelledby="nextBirthdayHeading">
+        <p class="section-kicker">Next birthday</p>
+        <h2 class="sr-only" id="nextBirthdayHeading">Next birthday</h2>
+        <div class="next-birthday-grid">
+          <div><span class="next-birthday-value" id="nextBirthdayMonths">0</span><span class="next-birthday-label">Months</span></div>
+          <div><span class="next-birthday-value" id="nextBirthdayDays">0</span><span class="next-birthday-label">Days</span></div>
+        </div>
+        <p class="next-birthday-caption" id="nextBirthdayCaption">Your next birthday is coming up.</p>
+      </section>
+
+      <details class="info-card accordion-card" id="upcomingBirthdaysDetails">
+        <summary class="section-accordion">Upcoming birthdays</summary>
+        <div class="accordion-body">
+          <div class="birthday-list" id="upcomingBirthdaysList"></div>
+        </div>
+      </details>
+
+      <section class="info-card" aria-labelledby="elapsedHeading">
+        <h2 class="section-title" id="elapsedHeading">Your time in numbers</h2><p class="section-subtitle">Calendar-equivalent totals</p>
+        <div class="elapsed-grid">
+          <div class="elapsed-tile"><span class="elapsed-number" id="elapsedYears">0</span><span class="elapsed-label">Total years</span></div>
+          <div class="elapsed-tile"><span class="elapsed-number" id="elapsedMonths">0</span><span class="elapsed-label">Months</span></div>
+          <div class="elapsed-tile"><span class="elapsed-number" id="elapsedWeeks">0</span><span class="elapsed-label">Weeks</span></div>
+          <div class="elapsed-tile"><span class="elapsed-number" id="elapsedDays">0</span><span class="elapsed-label">Days</span></div>
+          <div class="elapsed-tile"><span class="elapsed-number" id="elapsedHours">0</span><span class="elapsed-label">Hours</span></div>
+          <div class="elapsed-tile"><span class="elapsed-number" id="elapsedMinutes">0</span><span class="elapsed-label" id="elapsedMinutesLabel">Minutes · live</span></div>
+          <div class="elapsed-tile wide"><span class="elapsed-number" id="elapsedSeconds">0</span><span class="elapsed-label" id="elapsedSecondsLabel">Seconds · updating live</span></div>
+        </div>
+        <p class="detail-note">Calendar days × 24 hours, plus local clock time in Today mode. These are date-based equivalents, not measured lifetime durations. Fixed dates stop at midnight.</p>
+      </section>
+
+      <section class="info-card" aria-labelledby="usefulDetailsHeading">
+        <h2 class="section-title" id="usefulDetailsHeading">Useful details</h2>
+        <dl class="detail-list">
+          <div class="detail-item"><dt>Born on</dt><dd id="bornWeekday">—</dd></div>
+          <div class="detail-item"><dt>Generation (approx.)</dt><dd id="generationName">—</dd></div>
+          <div class="detail-item"><dt>Life path number</dt><dd id="lifePathName">—</dd></div>
+          <div class="detail-item"><dt>Traditional Indian season (approx.)</dt><dd id="indianSeason">—</dd></div>
+        </dl>
+        <p class="detail-note">Generational labels and Indian seasons are approximate. Life path numbers are a numerology tradition for entertainment, not a scientific measure.</p>
+      </section>
+
+      <section class="info-card" aria-labelledby="funStatsHeading">
+        <h2 class="section-title" id="funStatsHeading">Fun life statistics</h2>
+        <div class="fun-stats">
+          <div class="fun-stat"><span class="fun-stat-label">Estimated heartbeats</span><strong class="fun-stat-value" id="heartbeatsValue">—</strong></div>
+          <div class="fun-stat"><span class="fun-stat-label">Estimated breaths</span><strong class="fun-stat-value" id="breathsValue">—</strong></div>
+          <div class="fun-stat"><span class="fun-stat-label">Estimated hours slept</span><strong class="fun-stat-value" id="sleepValue">—</strong></div>
+          <div class="fun-stat"><span class="fun-stat-label">Estimated meals</span><strong class="fun-stat-value" id="mealsValue">—</strong></div>
+        </div>
+        <div class="more-stats">
+          <button class="submit-button" type="button" id="moreStatsButton" aria-expanded="false" aria-controls="moreStatsPanel">More statistics <span aria-hidden="true">＋</span></button>
+          <div class="more-stats-grid" id="moreStatsPanel" hidden>
+            <div class="fun-stat"><span class="fun-stat-label">Birthdays reached</span><strong class="fun-stat-value" id="birthdaysReached">—</strong></div>
+            <div class="fun-stat"><span class="fun-stat-label">Estimated weekends lived</span><strong class="fun-stat-value" id="weekendsLived">—</strong></div>
+            <div class="fun-stat"><span class="fun-stat-label">Leap dates in range (inclusive)</span><strong class="fun-stat-value" id="leapDaysLived">—</strong></div>
+            <div class="fun-stat"><span class="fun-stat-label">Days to next milestone age</span><strong class="fun-stat-value" id="nextMilestoneDays">—</strong></div>
+          </div>
+        </div>
+        <p class="detail-note">These are broad estimates based on averages (70 heartbeats/min, 14 breaths/min, 8 hours of sleep/day and 3 meals/day); actual numbers vary from person to person.</p>
+      </section>
+    </div>
+    </div>
+    </div>
+    <footer class="page-footer">
+      <span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg>
+        Made for your moments. Calculated on your device.
+      </span>
+    </footer>
+  </main>
+  <div class="toast" id="statusMessage" role="status" aria-live="polite" aria-atomic="true"></div>
+  <dialog id="appearanceDialog" class="appearance-dialog" aria-labelledby="appearanceTitle"><div class="dialog-heading"><div><p class="eyebrow">MAKE IT YOURS</p><h2 id="appearanceTitle">A different kind of mood.</h2></div><button type="button" class="icon-button" id="closeAppearance" aria-label="Close appearance settings">×</button></div><p class="dialog-copy">Eight considered palettes. One little space that feels like you.</p><div class="theme-options" id="themeOptions" role="group" aria-label="Color theme"></div><p class="dialog-foot">Your choice stays on this device.</p></dialog>
+  <dialog id="shareDialog" class="appearance-dialog share-dialog" aria-labelledby="shareTitle"><div class="dialog-heading"><h2 id="shareTitle">Your age, ready to share.</h2><button type="button" class="icon-button" id="closeShare" aria-label="Close share text">×</button></div><p class="dialog-copy">Sharing or clipboard access is unavailable. Select and copy the text below.</p><label class="sr-only" for="shareText">Age result text</label><textarea id="shareText" readonly rows="6"></textarea><button type="button" class="submit-button" id="selectShareText">Select text</button></dialog>
+  <noscript><p class="noscript-note">Please enable JavaScript to calculate your age. Your dates are processed only on this device.</p></noscript>
+
+  <script>
+'use strict';
+(() => {
+  const $ = id => document.getElementById(id);
+  const MIN_YEAR = 1, MAX_YEAR = 9999, DAY_MS = 86400000;
+  const KEYS = { birthday:'age_calculator_birthday_v1', theme:'age_calculator_theme_v2', remember:'age_calculator_remember_v2', policy:'age_calculator_leap_policy_v2' };
+  const nf = new Intl.NumberFormat('en-GB', { maximumFractionDigits:0 });
+  const df = new Intl.NumberFormat('en-GB', { maximumFractionDigits:2 });
+  const form = $('ageForm'), birthInput = $('birthday'), targetInput = $('ageOn');
+  let currentBirth = null, currentTarget = null, tracksToday = true, ticker = null, toastTimer = null, storedSuccessfully = false;
+  const themes = {
+    sage:{ name:'Sage Atelier', description:'Botanical · quietly grounded', mode:'light', colors:['#f6f5f0','#345645','#b6c5ae'], vars:{page:'#f6f5f0',surface:'#fffefa','surface-raised':'#fffefa',field:'#f7f7f1',line:'#e1e4d9','line-strong':'#7d897b',ink:'#24352d',muted:'#57675d',faint:'#617064',accent:'#345645','accent-pressed':'#284536','accent-soft':'#eaf0e7','on-accent':'#fffefa',error:'#a52d2b',halo:'#e4e9dd'} },
+    porcelain:{ name:'Porcelain', description:'Paper · ink · pure simplicity', mode:'light', colors:['#f5f5f5','#343b46','#c0c5cc'], vars:{page:'#f5f5f5',surface:'#ffffff','surface-raised':'#ffffff',field:'#f4f5f6',line:'#dfe2e6','line-strong':'#818793',ink:'#252b35',muted:'#59616f',faint:'#626975',accent:'#343b46','accent-pressed':'#202733','accent-soft':'#eceef2','on-accent':'#ffffff',error:'#b32929',halo:'#e9ebef'} },
+    champagne:{ name:'Champagne', description:'Warm linen · antique gold', mode:'light', colors:['#f8f3e9','#77572d','#d5bc8c'], vars:{page:'#f8f3e9',surface:'#fffcf5','surface-raised':'#fffcf5',field:'#f6f0e5',line:'#e6dccb','line-strong':'#968569',ink:'#3c3326',muted:'#6d614f',faint:'#75664f',accent:'#77572d','accent-pressed':'#5f4320','accent-soft':'#f2e9d7','on-accent':'#fffdf8',error:'#a62f29',halo:'#eee1c8'} },
+    rose:{ name:'Rosewater', description:'Soft blush · berry ink', mode:'light', colors:['#faf2f3','#864e60','#d7b0bb'], vars:{page:'#faf2f3',surface:'#fffafb','surface-raised':'#fffafb',field:'#f8eff1',line:'#eadbe0','line-strong':'#a57e8a',ink:'#432e37',muted:'#765764',faint:'#7a5f6b',accent:'#864e60','accent-pressed':'#703d4e','accent-soft':'#f4e5e9','on-accent':'#fffafb',error:'#a92830',halo:'#f0dfe5'} },
+    lavender:{ name:'Lavender Haze', description:'Lilac mist · plum details', mode:'light', colors:['#f5f2fa','#695187','#c6b6dc'], vars:{page:'#f5f2fa',surface:'#fdfaff','surface-raised':'#fdfaff',field:'#f2eef8',line:'#e4ddeb','line-strong':'#9a87ad',ink:'#3b2d4b',muted:'#6c5b7d',faint:'#746280',accent:'#695187','accent-pressed':'#533e70','accent-soft':'#ebe3f3','on-accent':'#fdfaff',error:'#a52d42',halo:'#e8e0f2'} },
+    ocean:{ name:'Coastal Blue', description:'Sea glass · ocean stillness', mode:'light', colors:['#eef5f7','#2e6376','#a5c7ce'], vars:{page:'#eef5f7',surface:'#faffff','surface-raised':'#faffff',field:'#edf4f5',line:'#d7e4e8','line-strong':'#7896a0',ink:'#253d47',muted:'#506d77',faint:'#5a737d',accent:'#2e6376','accent-pressed':'#234d5d','accent-soft':'#e0eef1','on-accent':'#faffff',error:'#aa3038',halo:'#d8e9ed'} },
+    midnight:{ name:'Midnight Studio', description:'Deep navy · moonlit blue', mode:'dark', colors:['#121b29','#a9c9e8','#354b65'], vars:{page:'#121b29',surface:'#1c2839','surface-raised':'#1c2839',field:'#233246',line:'#34465d','line-strong':'#7086a0',ink:'#edf3fa',muted:'#b7c5d6',faint:'#aabace',accent:'#a9c9e8','accent-pressed':'#bfdaf2','accent-soft':'#293e56','on-accent':'#152535',error:'#ffb0ac',halo:'#1d2d43'} },
+    obsidian:{ name:'Obsidian Gold', description:'Charcoal · a touch of brass', mode:'dark', colors:['#1b1b19','#dbbf83','#474438'], vars:{page:'#1b1b19',surface:'#262622','surface-raised':'#262622',field:'#30302a',line:'#44443a','line-strong':'#8b8877',ink:'#f5f0e5',muted:'#cbc4b5',faint:'#bfb8a7',accent:'#dbbf83','accent-pressed':'#e7ce9b','accent-soft':'#3c3729','on-accent':'#292215',error:'#ffb2a6',halo:'#302e25'} }
+  };
+  function storageRead(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
+  function storageWrite(key,value) { try { localStorage.setItem(key,value); return true; } catch (_) { return false; } }
+  function storageRemove(key) { try { localStorage.removeItem(key); return true; } catch (_) { return false; } }
+  function announce(message) { clearTimeout(toastTimer); $('statusMessage').textContent=message; toastTimer=setTimeout(() => { $('statusMessage').textContent=''; },6000); }
+  function setText(id,value) { $(id).textContent=String(value); }
+  function localDateParts(date=new Date()) { return {y:date.getFullYear(),m:date.getMonth()+1,d:date.getDate()}; }
+  function isLeapYear(y) { return y%4===0 && (y%100!==0 || y%400===0); }
+  function daysInMonth(y,m) { return [31,isLeapYear(y)?29:28,31,30,31,30,31,31,30,31,30,31][m-1] || 0; }
+  function validParts(p) { return !!p && Number.isInteger(p.y) && Number.isInteger(p.m) && Number.isInteger(p.d) && p.y>=MIN_YEAR && p.y<=MAX_YEAR && p.m>=1 && p.m<=12 && p.d>=1 && p.d<=daysInMonth(p.y,p.m); }
+  function dateKey(p) { return `${String(p.y).padStart(4,'0')}-${String(p.m).padStart(2,'0')}-${String(p.d).padStart(2,'0')}`; }
+  function parseDate(value) { const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(value || ''); if(!m) return null; const p={y:Number(m[1]),m:Number(m[2]),d:Number(m[3])}; return validParts(p)?p:null; }
+  function compareDates(a,b) { return Math.sign(a.y-b.y || a.m-b.m || a.d-b.d); }
+  function utcDate(p) { const d=new Date(0); d.setUTCHours(0,0,0,0); d.setUTCFullYear(p.y,p.m-1,p.d); return d; }
+  function dateOrdinal(p) { return Math.floor(utcDate(p).getTime()/DAY_MS); }
+  function daysBetween(a,b) { return dateOrdinal(b)-dateOrdinal(a); }
+  function addDays(p,n) { const d=new Date((dateOrdinal(p)+n)*DAY_MS); return {y:d.getUTCFullYear(),m:d.getUTCMonth()+1,d:d.getUTCDate()}; }
+  // Pure calendar dates must never pass through local-time normalization (e.g. Apia's skipped 2011-12-30).
+  function formatDate(p,options={weekday:'long',day:'numeric',month:'long',year:'numeric'}) { return new Intl.DateTimeFormat('en-GB',{...options,calendar:'gregory',numberingSystem:'latn',timeZone:'UTC'}).format(utcDate(p)); }
+  function weekday(p) { return formatDate(p,{weekday:'long'}); }
+  function plural(n,word) { return `${nf.format(n)} ${word}${n===1?'':'s'}`; }
+  function activePolicy() { return $('leapPolicy').value==='feb28'?'feb28':'mar1'; }
+  function birthdayInYear(birth,year,policy='mar1') { if(year<MIN_YEAR || year>MAX_YEAR) return null; if(birth.m===2 && birth.d===29 && !isLeapYear(year)) return policy==='feb28'?{y:year,m:2,d:28}:{y:year,m:3,d:1}; return {y:year,m:birth.m,d:birth.d}; }
+  function addMonths(p,n) { const total=(p.y-1)*12+p.m-1+n, y=Math.floor(total/12)+1, m=((total%12)+12)%12+1; return {y,m,d:Math.min(p.d,daysInMonth(y,m))}; }
+  function monthsAndDaysBetween(from,to,maxMonths=Infinity) { if(compareDates(from,to)>0) throw new RangeError('End date precedes start date.'); let months=Math.min((to.y-from.y)*12+to.m-from.m,maxMonths); if(compareDates(addMonths(from,months),to)>0) months--; return {months,days:daysBetween(addMonths(from,months),to)}; }
+  // Age is intentionally anniversary-based. This convention is documented in the interface.
+  function calculateAge(birth,target,policy='mar1') { if(!validParts(birth)||!validParts(target)||compareDates(birth,target)>0) throw new RangeError('Use valid dates in chronological order.'); let years=target.y-birth.y; if(compareDates(birthdayInYear(birth,target.y,policy),target)>0) years--; const anchor=birthdayInYear(birth,birth.y+years,policy); const rest=monthsAndDaysBetween(anchor,target,11); return {years,months:rest.months,days:rest.days}; }
+  function nextBirthdayInfo(birth,target,policy='mar1') { let year=Math.max(target.y,birth.y+1); let date=birthdayInYear(birth,year,policy); if(!date) return null; if(compareDates(date,target)<0) date=birthdayInYear(birth,++year,policy); if(!date) return null; const rest=monthsAndDaysBetween(target,date); return {date,days:daysBetween(target,date),months:rest.months,remainderDays:rest.days}; }
+  function totalMonths(birth,target) { return monthsAndDaysBetween(birth,target).months; }
+  function leapDaysInRange(birth,target) { const through=y=>Math.floor(y/4)-Math.floor(y/100)+Math.floor(y/400); let a=birth.y, b=target.y; if(birth.m>2) a++; if(target.m<2 || (target.m===2 && target.d<29)) b--; return Math.max(0,through(b)-through(a-1)); }
+  function calendarSeconds(birth,target,live,now=new Date()) { let seconds=daysBetween(birth,target)*86400; if(live) seconds+=now.getHours()*3600+now.getMinutes()*60+now.getSeconds(); return seconds; }
+  function compact(n) { if(n>=1e9) return `${df.format(n/1e9)} billion`; if(n>=1e6) return `${df.format(n/1e6)} million`; return nf.format(n); }
+  function generationFor(y) { if(y>=2013) return '2013 onward (labels vary)'; if(y>=1997) return 'Generation Z'; if(y>=1981) return 'Millennial'; if(y>=1965) return 'Generation X'; if(y>=1946) return 'Baby Boomer'; if(y>=1928) return 'Silent Generation'; if(y>=1901) return 'Greatest Generation'; return 'Outside commonly used modern ranges'; }
+  function lifePath(p) { let n=[...dateKey(p).replaceAll('-','')].reduce((sum,d)=>sum+Number(d),0); while(n>9 && ![11,22,33].includes(n)) n=[...String(n)].reduce((sum,d)=>sum+Number(d),0); const names={1:'The Leader',2:'The Peacemaker',3:'The Communicator',4:'The Builder',5:'The Adventurer',6:'The Nurturer',7:'The Seeker',8:'The Achiever',9:'The Humanitarian',11:'The Intuitive',22:'The Master Builder',33:'The Compassionate Guide'}; return `${n} (${names[n]})`; }
+  function indianSeason(m) { return ['Winter (Shishira)','Spring (Vasanta)','Summer (Grishma)','Monsoon (Varsha)','Autumn (Sharad)','Pre-winter (Hemanta)'][Math.floor((m-1)/2)]; }
+  function updateTodayButton() { $('todayButton').setAttribute('aria-pressed',String(tracksToday)); }
+  function refreshLimits() { const today=localDateParts(); const birth=parseDate(birthInput.value),target=parseDate(targetInput.value); birthInput.min='0001-01-01'; birthInput.max=dateKey(today); targetInput.min=birth?dateKey(birth):'0001-01-01'; targetInput.max='9999-12-31'; setText('birthdayWeekday',birth?weekday(birth):''); setText('ageOnWeekday',target?`${weekday(target)}${tracksToday?' · follows today':''}`:''); updateTodayButton(); return today; }
+  function clearError() { $('dateError').hidden=true; $('dateError').textContent=''; birthInput.removeAttribute('aria-invalid'); targetInput.removeAttribute('aria-invalid'); }
+  function invalidate() { stopTicker(); currentBirth=null; currentTarget=null; $('ageResult').hidden=true; $('extraResults').hidden=true; $('emptyState').hidden=false; }
+  function showError(message,input) { invalidate(); $('dateError').textContent=message; $('dateError').hidden=false; input.setAttribute('aria-invalid','true'); input.focus(); }
+  function storageNote() { setText('storageNote',!$('rememberBirthday').checked?'Birthday is not remembered. Reset clears your dates.':storedSuccessfully?'Birthday remembered only in this browser. Reset deletes it.':'Browser storage is unavailable. Your birthday is not remembered.'); }
+  function saveBirthday() { if($('rememberBirthday').checked && currentBirth) storedSuccessfully=storageWrite(KEYS.birthday,dateKey(currentBirth)); else { storageRemove(KEYS.birthday); storedSuccessfully=false; } storageNote(); }
+  function updateStats(birth,target,live) { const age=calculateAge(birth,target,activePolicy()); const days=daysBetween(birth,target),weeks=Math.floor(days/7),seconds=calendarSeconds(birth,target,live),minutes=Math.floor(seconds/60); const values={elapsedYears:age.years,elapsedMonths:totalMonths(birth,target),elapsedWeeks:weeks,elapsedDays:days,elapsedHours:Math.floor(seconds/3600),elapsedMinutes:minutes,elapsedSeconds:seconds,birthdaysReached:age.years,weekendsLived:weeks,leapDaysLived:leapDaysInRange(birth,target),sleepValue:days*8,mealsValue:days*3}; Object.entries(values).forEach(([id,n])=>setText(id,nf.format(n))); setText('elapsedMinutesLabel',live?'Minutes · live':'Minutes'); setText('elapsedSecondsLabel',live?'Seconds · local clock live':'Seconds · midnight at selected date'); setText('heartbeatsValue',compact(minutes*70)); setText('breathsValue',compact(minutes*14)); const milestoneAge=(Math.floor(age.years/10)+1)*10, milestone=birthdayInYear(birth,birth.y+milestoneAge,activePolicy()); setText('nextMilestoneDays',milestone?nf.format(daysBetween(target,milestone)):'Beyond year 9999'); }
+  function renderBirthdayRow(birth,date) { const row=document.createElement('div'); row.className='birthday-row'; const main=document.createElement('div'); main.className='birthday-main'; const label=document.createElement('span'); label.className='birthday-date'; label.textContent=formatDate(date,{day:'numeric',month:'short',year:'numeric'}); const day=document.createElement('span'); day.className='birthday-weekday'; day.textContent=weekday(date); const age=document.createElement('span'); age.className='birthday-age'; age.textContent=`Turns ${nf.format(date.y-birth.y)}`; main.append(label,day); row.append(main,age); return row; }
+  function renderResult(birth,target,focus=false) { const age=calculateAge(birth,target,activePolicy()); currentBirth={...birth}; currentTarget={...target}; setText('yearsValue',nf.format(age.years)); setText('monthsValue',age.months); setText('daysValue',age.days); setText('asOfDate',`As of ${formatDate(target)}${tracksToday?' · Today':''}`); setText('ageSummary',`${plural(age.years,'year')}, ${plural(age.months,'month')} and ${plural(age.days,'day')}.`); const next=nextBirthdayInfo(birth,target,activePolicy()); setText('nextBirthdayMonths',next?next.months:'—'); setText('nextBirthdayDays',next?next.remainderDays:'—'); setText('nextBirthdayCaption',!next?'The next birthday falls beyond the supported year 9999.':next.days===0?`${tracksToday?'Happy birthday!':'Birthday on the selected date!'} Turning ${nf.format(next.date.y-birth.y)}.`:`${formatDate(next.date,{day:'numeric',month:'long',year:'numeric'})} · ${plural(next.days,'day')} ${tracksToday?'to go':'after selected date'}`); const list=$('upcomingBirthdaysList'); list.replaceChildren(); if(next) { for(let i=0;i<5;i++) { const date=birthdayInYear(birth,next.date.y+i,activePolicy()); if(!date) break; list.append(renderBirthdayRow(birth,date)); } } else { const p=document.createElement('p'); p.className='empty-hint'; p.textContent='No further birthdays within the supported date range.'; list.append(p); } setText('bornWeekday',weekday(birth)); setText('generationName',generationFor(birth.y)); setText('lifePathName',lifePath(birth)); setText('indianSeason',indianSeason(birth.m)); updateStats(birth,target,tracksToday); $('emptyState').hidden=true; $('ageResult').hidden=false; $('extraResults').hidden=false; storageNote(); if(focus) { $('ageResult').focus({preventScroll:true}); if(matchMedia('(max-width:720px)').matches) $('ageResult').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth',block:'start'}); } }
+  function validateAndRender(focus=true) { clearError(); if(tracksToday) targetInput.value=dateKey(localDateParts()); const today=refreshLimits(),birth=parseDate(birthInput.value),target=parseDate(targetInput.value); if(!birth) { showError('Enter a valid birth date between 0001 and 9999.',birthInput); return false; } if(compareDates(birth,today)>0) { showError('Your date of birth cannot be in the future.',birthInput); return false; } if(!target) { showError('Enter a valid target date between 0001 and 9999.',targetInput); return false; } if(compareDates(target,birth)<0) { showError('The target date must be on or after your birth date.',targetInput); return false; } if(tracksToday && compareDates(target,today)!==0) { tracksToday=false; updateTodayButton(); } renderResult(birth,target,focus); saveBirthday(); startTicker(); return true; }
+  function stopTicker() { if(ticker!==null) { clearInterval(ticker); ticker=null; } }
+  function startTicker() { stopTicker(); if(currentBirth && tracksToday && !document.hidden) ticker=setInterval(tick,1000); }
+  function tick() { if(!currentBirth || !tracksToday) return; const today=localDateParts(); if(compareDates(currentBirth,today)>0) { showError('The current device date is earlier than your birth date. Check your device clock.',birthInput); return; } if(compareDates(today,currentTarget)!==0) { targetInput.value=dateKey(today); refreshLimits(); renderResult(currentBirth,today); } else updateStats(currentBirth,currentTarget,true); }
+  function refreshAfterVisibility() { if(document.hidden) { stopTicker(); return; } if(tracksToday) targetInput.value=dateKey(localDateParts()); refreshLimits(); if(currentBirth && tracksToday) tick(); startTicker(); }
+  function escapeICS(text) { return String(text).replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/;/g,'\\;').replace(/,/g,'\\,'); }
+  function foldICS(line) { const encoder=new TextEncoder(); let out='',part='',bytes=0; for(const ch of line) { const n=encoder.encode(ch).length; if(bytes+n>75) { out+=part+'\r\n'; part=' '; bytes=1; } part+=ch; bytes+=n; } return out+part; }
+  function makeCalendar(birth,target,policy='mar1',now=new Date()) { const next=nextBirthdayInfo(birth,target,policy); if(!next) return null; const stamp=now.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''); const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Age Calculator//Birthday Dates//EN','CALSCALE:GREGORIAN']; for(let i=0;i<8;i++) { const p=birthdayInYear(birth,next.date.y+i,policy); if(!p) break; const start=dateKey(p).replaceAll('-',''); lines.push('BEGIN:VEVENT',`UID:agecalc-${dateKey(birth).replaceAll('-','')}-${start}@age-calculator.local`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${start}`,'DURATION:P1D',`SUMMARY:${escapeICS(`Birthday - turns ${p.y-birth.y}`)}`,`DESCRIPTION:${escapeICS(`Birthday date. February 29 rule: ${policy==='feb28'?'February 28':'March 1'} in non-leap years. Add notifications in your calendar app.`)}`,'TRANSP:TRANSPARENT','END:VEVENT'); } lines.push('END:VCALENDAR'); return lines.map(foldICS).join('\r\n')+'\r\n'; }
+  function exportCalendar() { if(!currentBirth || !currentTarget) return; const text=makeCalendar(currentBirth,currentTarget,activePolicy()); if(!text) { announce('No birthdays remain within the supported date range.'); return; } const blob=new Blob([text],{type:'text/calendar;charset=utf-8'}); const url=URL.createObjectURL(blob),a=document.createElement('a'); a.href=url; a.download='birthday-dates.ics'; document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),30000); announce('Birthday dates exported from the selected date. Add alerts in your calendar app.'); }
+  function showShareText(message) { $('shareText').value=message; openDialog($('shareDialog')); $('shareText').focus(); $('shareText').select(); announce('Select and copy your result in the sharing dialog.'); }
+  async function copyResult(message) { if(navigator.clipboard && navigator.clipboard.writeText) { try { await navigator.clipboard.writeText(message); announce('Age result copied to clipboard.'); return; } catch (_) {} } showShareText(message); }
+  async function shareResult() { if(!currentBirth || !currentTarget) return; const age=calculateAge(currentBirth,currentTarget,activePolicy()); const rule=currentBirth.m===2 && currentBirth.d===29?` February 29 birthdays use ${activePolicy()==='feb28'?'February 28':'March 1'} in non-leap years.`:''; const message=`My age on ${formatDate(currentTarget)} is ${plural(age.years,'year')}, ${plural(age.months,'month')} and ${plural(age.days,'day')}.${rule} Calculated with Age Calculator.`; if(typeof navigator.share==='function') { try { await navigator.share({title:'My age',text:message}); return; } catch(error) { if(error.name==='AbortError') return; } } await copyResult(message); }
+  function openDialog(dialog) { if(typeof dialog.showModal==='function') { if(!dialog.open) dialog.showModal(); } else dialog.setAttribute('open',''); }
+  function closeDialog(dialog) { if(typeof dialog.close==='function') dialog.close(); else dialog.removeAttribute('open'); }
+  function applyTheme(key,persist=false) { if(!Object.hasOwn(themes,key)) key='sage'; const theme=themes[key]; Object.entries(theme.vars).forEach(([name,value])=>document.documentElement.style.setProperty(`--${name}`,value)); document.documentElement.style.colorScheme=theme.mode; document.documentElement.dataset.theme=key; document.querySelector('meta[name=theme-color]').content=theme.vars.page; document.querySelector('meta[name=color-scheme]').content=theme.mode; document.querySelectorAll('.theme-option').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.theme===key))); if(persist && !storageWrite(KEYS.theme,key)) announce('Theme applied for this session; browser storage is unavailable.'); }
+  function initThemes() { Object.entries(themes).forEach(([key,theme])=>{ const button=document.createElement('button'); button.type='button'; button.className='theme-option'; button.dataset.theme=key; button.setAttribute('aria-pressed','false'); button.setAttribute('aria-label',`${theme.name}, ${theme.description}`); const swatches=document.createElement('span'); swatches.className='theme-swatches'; swatches.setAttribute('aria-hidden','true'); theme.colors.forEach(c=>{const swatch=document.createElement('i'); swatch.style.background=c; swatches.append(swatch);}); const name=document.createElement('span'); name.className='theme-name'; name.textContent=theme.name; const description=document.createElement('span'); description.className='theme-description'; description.textContent=theme.description; button.append(swatches,name,description); button.addEventListener('click',()=>applyTheme(key,true)); $('themeOptions').append(button); }); applyTheme(storageRead(KEYS.theme)||'sage'); }
+  form.addEventListener('submit',event=>{event.preventDefault(); validateAndRender();});
+  [birthInput,targetInput].forEach(input=>{ input.addEventListener('input',()=>{ if(input===targetInput) tracksToday=false; clearError(); invalidate(); refreshLimits(); }); input.addEventListener('change',refreshLimits); });
+  $('todayButton').addEventListener('click',()=>{ tracksToday=true; targetInput.value=dateKey(localDateParts()); clearError(); const hadResult=!!currentBirth; refreshLimits(); if(hadResult) validateAndRender(false); else invalidate(); });
+  $('leapPolicy').addEventListener('change',()=>{storageWrite(KEYS.policy,activePolicy()); if(currentBirth) renderResult(currentBirth,currentTarget);});
+  $('rememberBirthday').addEventListener('change',()=>{ storageWrite(KEYS.remember,String($('rememberBirthday').checked)); if(!$('rememberBirthday').checked) { const removed=storageRemove(KEYS.birthday); storedSuccessfully=false; if(!removed) announce('Could not remove saved data. Clear this site’s storage in browser settings.'); } else if(currentBirth) saveBirthday(); storageNote(); });
+  $('saveDateButton').addEventListener('click',exportCalendar);
+  $('shareButton').addEventListener('click',shareResult);
+  $('resetButton').addEventListener('click',()=>{invalidate(); clearError(); const removed=storageRemove(KEYS.birthday); storedSuccessfully=false; birthInput.value=''; tracksToday=true; targetInput.value=dateKey(localDateParts()); $('moreStatsPanel').hidden=true; $('moreStatsButton').setAttribute('aria-expanded','false'); $('moreStatsButton').innerHTML='More statistics <span aria-hidden="true">＋</span>'; $('upcomingBirthdaysDetails').open=false; refreshLimits(); birthInput.focus(); announce(removed?'Dates cleared. Saved birthday deleted.':'Dates cleared here. Clear browser site data to remove any stored birthday.');});
+  $('moreStatsButton').addEventListener('click',()=>{ const expanded=$('moreStatsButton').getAttribute('aria-expanded')==='true'; $('moreStatsButton').setAttribute('aria-expanded',String(!expanded)); $('moreStatsPanel').hidden=expanded; $('moreStatsButton').innerHTML=expanded?'More statistics <span aria-hidden="true">＋</span>':'Fewer statistics <span aria-hidden="true">−</span>'; });
+  $('appearanceButton').addEventListener('click',()=>openDialog($('appearanceDialog')));
+  $('closeAppearance').addEventListener('click',()=>{closeDialog($('appearanceDialog')); $('appearanceButton').focus();});
+  $('closeShare').addEventListener('click',()=>{closeDialog($('shareDialog')); $('shareButton').focus();});
+  $('selectShareText').addEventListener('click',()=>{$('shareText').focus(); $('shareText').select();});
+  [$('appearanceDialog'),$('shareDialog')].forEach(dialog=>dialog.addEventListener('click',event=>{if(event.target===dialog) {const r=dialog.getBoundingClientRect(); if(event.clientX<r.left || event.clientX>r.right || event.clientY<r.top || event.clientY>r.bottom) closeDialog(dialog);}}));
+  document.addEventListener('visibilitychange',refreshAfterVisibility);
+  window.addEventListener('pageshow',refreshAfterVisibility);
+  window.addEventListener('focus',refreshAfterVisibility);
+  window.addEventListener('pagehide',stopTicker);
+  initThemes();
+  $('rememberBirthday').checked=storageRead(KEYS.remember)!=='false';
+  $('leapPolicy').value=storageRead(KEYS.policy)==='feb28'?'feb28':'mar1';
+  targetInput.value=dateKey(localDateParts());
+  const saved=storageRead(KEYS.birthday),savedBirth=parseDate(saved);
+  if($('rememberBirthday').checked && savedBirth && compareDates(savedBirth,localDateParts())<=0) {birthInput.value=dateKey(savedBirth); validateAndRender(false);} else if(saved) storageRemove(KEYS.birthday);
+  refreshLimits();
+  // Stable pure-function surface for the accompanying regression suite. No personal input is exported.
+  window.AgeCalculator=Object.freeze({parseDate,validParts,dateKey,isLeapYear,daysInMonth,compareDates,utcDate,dateOrdinal,daysBetween,addDays,formatDate,weekday,birthdayInYear,addMonths,monthsAndDaysBetween,calculateAge,nextBirthdayInfo,totalMonths,leapDaysInRange,calendarSeconds,makeCalendar,foldICS});
+})();
+
+  </script>
+</body>
+</html>
