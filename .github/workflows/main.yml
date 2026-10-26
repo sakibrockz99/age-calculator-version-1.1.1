@@ -1,0 +1,292 @@
+name: Build Age Calculator Premium APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Validate and build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Select age-calculator-premium.html and prepare web assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Build this exact user-provided version only. Do not fall back to older HTML files.
+          HTML="age-calculator-premium.html"
+          if [ ! -f "$HTML" ]; then
+            echo "ERROR: Add age-calculator-premium.html to the repository root. This workflow intentionally will not substitute another version."
+            exit 1
+          fi
+
+          if [ ! -f icon.png ]; then
+            echo "ERROR: icon.png is missing. Add the launcher icon to the repository root."
+            exit 1
+          fi
+
+          echo "Packaging HTML source without modifying it: $HTML"
+          mkdir -p www
+          cp --preserve=mode,timestamps "$HTML" www/index.html
+          cmp --silent "$HTML" www/index.html
+          echo "Source HTML copied byte-for-byte before the build-only platform patch."
+
+      - name: Add Android status-bar safe area and theme sync to packaged copy only
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > statusbar-theme-entry.js <<'JS'
+          import { Capacitor, SystemBars, SystemBarsStyle, SystemBarType } from '@capacitor/core';
+
+          (() => {
+            const scheme = document.querySelector('meta[name=\"color-scheme\"]');
+            const syncStatusBar = async () => {
+              if (!Capacitor.isNativePlatform() || !scheme) return;
+              const style = scheme.content.trim().toLowerCase() === 'dark'
+                ? SystemBarsStyle.Dark
+                : SystemBarsStyle.Light;
+              try {
+                await SystemBars.setStyle({ style, bar: SystemBarType.StatusBar });
+              } catch (_) { /* Keep the web app usable if native bar styling is unavailable. */ }
+            };
+            syncStatusBar();
+            if (scheme) {
+              new MutationObserver(syncStatusBar).observe(scheme, { attributes: true, attributeFilter: ['content'] });
+            }
+          })();
+          JS
+
+          python - <<'PYHTML'
+          from pathlib import Path
+          import re
+          path = Path('www/index.html')
+          html = path.read_text(encoding='utf-8')
+          css = '''\n          <style id="native-statusbar-safe-area">
+          /* Build-only Android edge-to-edge fix: reserve the system-bar inset. */
+          .native-statusbar-backdrop {
+            position: fixed; inset: 0 0 auto 0;
+            height: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+            background: var(--page); pointer-events: none; z-index: 0;
+          }
+          .page-wrap {
+            padding-top: calc(34px + max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px))) !important;
+          }
+          @media (max-width: 720px) {
+            .page-wrap {
+              padding-top: calc(24px + max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px))) !important;
+            }
+          }
+          </style>
+          '''
+          if '</head>' not in html or '<body>' not in html or '</body>' not in html:
+              raise SystemExit('Could not safely locate HTML head/body for the status-bar patch.')
+          html = html.replace('</head>', css + '\n</head>', 1)
+          html = html.replace('<body>', '<body>\n<div class="native-statusbar-backdrop" aria-hidden="true"></div>', 1)
+          html = html.replace('</body>', '<script src="statusbar-theme.js"></script>\n</body>', 1)
+          path.write_text(html, encoding='utf-8')
+          print('Injected safe-area spacing and a theme-aware status-bar backdrop into the packaged copy only.')
+          PYHTML
+
+      - name: Validate HTML structure, IDs, and inline JavaScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          from collections import Counter
+          import re
+
+          source = Path('www/index.html').read_text(encoding='utf-8')
+
+          class Validator(HTMLParser):
+              def __init__(self):
+                  super().__init__(convert_charrefs=True)
+                  self.ids = []
+              def handle_starttag(self, tag, attrs):
+                  for key, value in attrs:
+                      if key == 'id' and value:
+                          self.ids.append(value)
+
+          parser = Validator()
+          parser.feed(source)
+          parser.close()
+          duplicates = [item for item, count in Counter(parser.ids).items() if count > 1]
+          if duplicates:
+              raise SystemExit('Duplicate HTML IDs: ' + ', '.join(duplicates))
+
+          scripts = re.findall(r'<script\b[^>]*>(.*?)</script\s*>', source, flags=re.I | re.S)
+          if not scripts:
+              raise SystemExit('No script block found in selected HTML.')
+          Path('/tmp/age-calculator-inline.js').write_text('\n\n'.join(scripts), encoding='utf-8')
+          print(f'HTML parsed; {len(parser.ids)} IDs found; no duplicate IDs; {len(scripts)} script block(s) extracted.')
+          PY
+          node --check /tmp/age-calculator-inline.js
+
+      - name: Install Capacitor and create Android project
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > package.json <<'JSON'
+          {
+            "name": "age-calculator-app",
+            "version": "1.0.0",
+            "private": true
+          }
+          JSON
+
+          # Keep the Capacitor packages on the same pinned stable release for reproducible builds.
+          npm install --save-exact @capacitor/core@8.5.3 @capacitor/android@8.5.3
+          npm install --save-dev --save-exact @capacitor/cli@8.5.3 esbuild@0.25.5
+          npx cap init "Age Calculator" "com.exactage.calculator" --web-dir www
+
+          # Use Capacitor 8 SystemBars for Android's enforced edge-to-edge layout.
+          # Remove CLI-generated config and write an explicit, reproducible JSON config.
+          rm -f capacitor.config.ts capacitor.config.json
+          cat > capacitor.config.json <<'JSON'
+          {
+            "appId": "com.exactage.calculator",
+            "appName": "Age Calculator",
+            "webDir": "www",
+            "plugins": {
+              "SystemBars": {
+                "insetsHandling": "css",
+                "initialViewportFitValueHint": "cover",
+                "style": "LIGHT",
+                "hidden": false,
+                "animation": "NONE"
+              }
+            }
+          }
+          JSON
+
+          npx esbuild statusbar-theme-entry.js --bundle --platform=browser --format=iife --target=es2020 --outfile=www/statusbar-theme.js
+          npx cap add android
+          npx cap sync android
+
+      - name: Generate launcher icons and set app label
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet Pillow
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageDraw
+          import re
+
+          root = Path('android/app/src/main/res')
+          source = Image.open('icon.png').convert('RGBA')
+          if source.width != source.height:
+              raise SystemExit(f'icon.png must be square; received {source.width}x{source.height}.')
+
+          for density, size in [('mdpi', 48), ('hdpi', 72), ('xhdpi', 96), ('xxhdpi', 144), ('xxxhdpi', 192)]:
+              folder = root / f'mipmap-{density}'
+              folder.mkdir(parents=True, exist_ok=True)
+              resized = source.resize((size, size), Image.Resampling.LANCZOS)
+              resized.save(folder / 'ic_launcher.png', optimize=True)
+              resized.save(folder / 'ic_launcher_round.png', optimize=True)
+
+          # IMPORTANT: derive the adaptive foreground from icon.png too.
+          # Android 8+ prefers mipmap-anydpi-v26/ic_launcher.xml over the
+          # legacy density PNGs, so a separate hard-coded foreground would
+          # make replacing icon.png appear to do nothing on modern devices.
+          drawable = root / 'drawable'
+          drawable.mkdir(parents=True, exist_ok=True)
+          adaptive_foreground = source.resize((432, 432), Image.Resampling.LANCZOS)
+          adaptive_foreground.save(drawable / 'age_calculator_launcher_foreground.png', optimize=True)
+
+          values = root / 'values'
+          values.mkdir(parents=True, exist_ok=True)
+          (values / 'age_calculator_launcher_background.xml').write_text(
+              '<?xml version="1.0" encoding="utf-8"?>\n'
+              '<resources>\n'
+              '    <color name="age_calculator_launcher_background">#173D2E</color>\n'
+              '</resources>\n', encoding='utf-8')
+
+          adaptive = root / 'mipmap-anydpi-v26'
+          adaptive.mkdir(parents=True, exist_ok=True)
+          icon_xml = (
+              '<?xml version="1.0" encoding="utf-8"?>\n'
+              '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
+              '    <background android:drawable="@color/age_calculator_launcher_background" />\n'
+              '    <foreground android:drawable="@drawable/age_calculator_launcher_foreground" />\n'
+              '</adaptive-icon>\n')
+          (adaptive / 'ic_launcher.xml').write_text(icon_xml, encoding='utf-8')
+          (adaptive / 'ic_launcher_round.xml').write_text(icon_xml, encoding='utf-8')
+
+          strings = values / 'strings.xml'
+          if strings.exists():
+              text = strings.read_text(encoding='utf-8')
+              if re.search(r'<string\s+name="app_name">.*?</string>', text, flags=re.S):
+                  text = re.sub(r'<string\s+name="app_name">.*?</string>',
+                                '<string name="app_name">Age Calculator</string>', text, count=1, flags=re.S)
+              else:
+                  text = text.replace('</resources>', '    <string name="app_name">Age Calculator</string>\n</resources>')
+              strings.write_text(text, encoding='utf-8')
+          print('Launcher icons and app label generated.')
+          PY
+
+      - name: Verify Android project and launcher resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f android/gradlew
+          test -f android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          test -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+          test -f android/app/src/main/res/drawable/age_calculator_launcher_foreground.png
+
+      - name: Build debug APK
+        working-directory: android
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew --no-daemon --stacktrace assembleDebug
+
+      - name: Create APK checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: Upload APK and checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: age-calculator-debug-apk
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/apk/debug/app-debug.apk.sha256
+          if-no-files-found: error
+          retention-days: 30
+          
